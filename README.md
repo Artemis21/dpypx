@@ -18,6 +18,12 @@ client = dpypx.Client('my-auth-token')
 canvas = await client.get_canvas()
 canvas.save('canvas.png')
 
+# And access pixels from it.
+print(canvas[4, 10])
+
+# Or just fetch specific pixels.
+print(await client.get_pixel(4, 10))
+
 # Draw a pixel.
 await client.put_pixel(50, 10, 'cyan')
 await client.put_pixel(1, 5, dpypx.Colour.BLURPLE)

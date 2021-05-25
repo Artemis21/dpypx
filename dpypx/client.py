@@ -4,7 +4,7 @@ from typing import Union, Optional
 
 import aiohttp
 
-from .canvas import Canvas
+from .canvas import Canvas, Pixel
 from .colours import Colour, parse_colour
 from .ratelimits import RateLimiter
 
@@ -34,12 +34,16 @@ class Client:
             self,
             method: str,
             endpoint: str,
+            *,
             data: Optional[dict] = None,
+            params: Optional[dict] = None,
             parse_json: bool = True) -> aiohttp.ClientResponse:
         """Make a call to an endpoint, respecting ratelimiting."""
         await self.ratelimits[endpoint].pause()
         client = await self.get_client()
-        request = client.request(method, self.base_url + endpoint, json=data)
+        request = client.request(
+            method, self.base_url + endpoint, json=data, params=params
+        )
         async with request as response:
             self.ratelimits[endpoint].update(response.headers)
             if parse_json:
@@ -50,7 +54,7 @@ class Client:
     async def put_pixel(
             self, x: int, y: int, colour: Union[int, str, Colour]) -> str:
         """Draw a pixel and return a message."""
-        data = await self.request('POST', 'set_pixel', {
+        data = await self.request('POST', 'set_pixel', data={
             'x': x,
             'y': y,
             'rgb': parse_colour(colour)
@@ -69,6 +73,12 @@ class Client:
         data = await self.request('GET', 'get_pixels', parse_json=False)
         size = await self.get_canvas_size()
         return Canvas(size, data)
+
+    async def get_pixel(self, x: int, y: int) -> Pixel:
+        """Get a specific pixel of the canvas."""
+        data = await self.request('GET', 'get_pixel', params={'x': x, 'y': y})
+        raw = data['rgb']
+        return Pixel(*(int(raw[i:i + 2], 16) for i in range(0, 6, 2)))
 
     async def close(self):
         """Close the underlying session."""

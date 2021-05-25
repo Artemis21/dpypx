@@ -3,6 +3,8 @@ import enum
 import re
 from typing import Union
 
+from .canvas import Pixel
+
 
 class Colour(enum.Enum):
     """A set of common colour codes."""
@@ -40,4 +42,7 @@ def parse_colour(value: Union[int, str, Colour]) -> str:
             return Colour.__members__[value.upper()].value
     elif isinstance(value, Colour):
         return value.value
+    elif isinstance(value, Pixel):
+        # Remove leading "#".
+        return str(value)[1:]
     raise ValueError(f'Invalid colour "{value}".')
