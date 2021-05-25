@@ -1,5 +1,4 @@
 """HTTP client to the pixel API."""
-from collections import defaultdict
 from typing import Union, Optional
 
 import aiohttp
@@ -15,7 +14,9 @@ class Client:
     def __init__(
             self,
             token: str,
-            base_url: str = 'https://pixels.pythondiscord.com/'):
+            base_url: str = 'https://pixels.pythondiscord.com/',
+            *,
+            ratelimit_save_file: Optional[str] = None):
         """Store the token and set up the client."""
         self.base_url = base_url
         self.headers = {
@@ -25,7 +26,7 @@ class Client:
         self.client = None
         # Cache canvas size, assuming it won't change.
         self.canvas_size = None
-        self.ratelimits = defaultdict(RateLimiter)
+        self.ratelimits = RateLimiter(ratelimit_save_file)
 
     async def get_client(self) -> aiohttp.ClientSession:
         """Get or create the client session."""
@@ -44,15 +45,15 @@ class Client:
             ratelimit_after: bool = False) -> aiohttp.ClientResponse:
         """Make a call to an endpoint, respecting ratelimiting."""
         if not ratelimit_after:
-            await self.ratelimits[endpoint].pause()
+            await self.ratelimits.pause(endpoint)
         client = await self.get_client()
         request = client.request(
             method, self.base_url + endpoint, json=data, params=params
         )
         async with request as response:
-            self.ratelimits[endpoint].update(response.headers)
+            self.ratelimits.update(endpoint, response.headers)
             if ratelimit_after:
-                await self.ratelimits[endpoint].pause()
+                await self.ratelimits.pause(endpoint)
             if parse_json:
                 return await response.json()
             else:
