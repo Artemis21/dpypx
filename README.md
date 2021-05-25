@@ -37,6 +37,32 @@ await client.put_pixel(44, 0, 0xFF0000)
 await client.close()
 ```
 
+## Auto-draw
+
+```python
+ad = dpypx.AutoDraw.load(client, '''0
+0
+3
+2
+ff0000
+00ff00
+0000ff
+ff0000
+00ff00
+0000ff''')
+await ad.draw()
+```
+
+Format of the drawing plan:
+
+- Leftmost X coordinate
+- Topmost Y coordinate
+- Width
+- Height
+- Each pixel, left-to-right, top-to-bottom.
+
+Auto-draw will avoid colouring already correct pixels, for efficiency.
+
 ## Logging
 
 To see logs:

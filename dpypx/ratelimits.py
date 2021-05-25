@@ -18,38 +18,52 @@ class RateLimitEndpoint:
         self.remaining = 1
         self.limit = None
         self.reset = None
+        self.cooldown_reset = None
 
     def update(self, headers: dict[str, int]):
         """Update the ratelimiter based on the latest headers."""
+        if 'Cooldown-Reset' in headers:
+            self.remaining = 0
+            self.cooldown_reset = int(headers['Cooldown-Reset'])
+            return
         if 'Requests-Remaining' not in headers:
             self.ratelimited = False
             return
-        self.remaining = headers['Requests-Remaining']
-        self.limit = headers['Requests-Limit']
-        self.reset = headers['Requests-Reset']
+        self.remaining = int(headers['Requests-Remaining'])
+        self.limit = int(headers['Requests-Limit'])
+        self.reset = int(headers.get('Requests-Reset', self.reset))
 
     async def pause(self):
         """Pause before sending another request if necessary."""
-        if self.remaining or not self.ratelimited:
+        if self.cooldown_reset:
+            logger.warning(f'Cooldown: Sleeping for {self.cooldown_reset}s.')
+            await asyncio.sleep(self.cooldown_reset)
+            self.cooldown_reset = None
+        if not self.ratelimited:
+            return
+        if self.remaining:
             logger.debug(
                 f'Not sleeping, {self.remaining} remaining requests.'
             )
             return
         logger.warning(f'Sleeping for {self.reset}s.')
-        await asyncio.sleep(self.reset)
+        if self.reset:
+            await asyncio.sleep(self.reset)
 
     def load(self, data: dict[str, int]):
         """Load stored ratelimit data."""
         self.remaining = data['remaining']
         self.limit = data['limit']
         self.reset = data['reset']
+        self.cooldown_reset = data.get('cooldown_reset', 0)
 
     def dump(self) -> dict[str, int]:
         """Dump ratelimit data for storing."""
         return {
             'remaining': self.remaining,
             'limit': self.limit,
-            'reset': self.reset
+            'reset': self.reset,
+            'cooldown_reset': self.cooldown_reset
         }
 
 

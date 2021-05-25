@@ -1,9 +1,17 @@
 """Container for all the pixels on a canvas."""
+from __future__ import annotations
+
 import PIL.Image
 
 
 class Pixel:
     """A single pixel of the canvas."""
+
+    @classmethod
+    def from_hex(cls, hex: str) -> Pixel:
+        """Load a pixel colour from a hex string."""
+        hex = hex.removeprefix('#')
+        return cls(*(int(hex[i:i + 2], 16) for i in range(0, 6, 2)))
 
     def __init__(self, red: int, green: int, blue: int):
         """Store the pixel."""
@@ -21,6 +29,10 @@ class Pixel:
     def triple(self) -> tuple[int, int, int]:
         """Get the pixel as an RGB triple."""
         return self.red, self.green, self.blue
+
+    def __eq__(self, other: Pixel) -> bool:
+        """Check if this pixel holds the same value as another."""
+        return self.triple == other.triple
 
 
 class Canvas:

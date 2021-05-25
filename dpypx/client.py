@@ -48,23 +48,26 @@ class Client:
             parse_json: bool = True,
             ratelimit_after: bool = False) -> aiohttp.ClientResponse:
         """Make a call to an endpoint, respecting ratelimiting."""
-        if not ratelimit_after:
-            await self.ratelimits.pause(endpoint)
-        client = await self.get_client()
         logger.debug(
             f'Request: {method} {endpoint} data={data!r} params={params!r}.'
         )
-        request = client.request(
-            method, self.base_url + endpoint, json=data, params=params
-        )
-        async with request as response:
-            self.ratelimits.update(endpoint, response.headers)
-            if ratelimit_after:
+        client = await self.get_client()
+        while True:
+            if not ratelimit_after:
                 await self.ratelimits.pause(endpoint)
-            if parse_json:
-                return await response.json()
-            else:
-                return await response.read()
+            request = client.request(
+                method, self.base_url + endpoint, json=data, params=params
+            )
+            async with request as response:
+                self.ratelimits.update(endpoint, response.headers)
+                if ratelimit_after:
+                    await self.ratelimits.pause(endpoint)
+                if response.status == 429:
+                    continue
+                if parse_json:
+                    return await response.json()
+                else:
+                    return await response.read()
 
     async def put_pixel(
             self, x: int, y: int, colour: Union[int, str, Colour]) -> str:
@@ -97,8 +100,7 @@ class Client:
     async def get_pixel(self, x: int, y: int) -> Pixel:
         """Get a specific pixel of the canvas."""
         data = await self.request('GET', 'get_pixel', params={'x': x, 'y': y})
-        raw = data['rgb']
-        return Pixel(*(int(raw[i:i + 2], 16) for i in range(0, 6, 2)))
+        return Pixel.from_hex(data['rgb'])
 
     async def close(self):
         """Close the underlying session."""
