@@ -36,3 +36,23 @@ await client.put_pixel(44, 0, 0xFF0000)
 # Close the connection.
 await client.close()
 ```
+
+## Logging
+
+To see logs:
+
+```python
+import logging
+
+logging.basicConfig(level=logging.INFO)
+```
+
+Too see more logs:
+```python
+logging.basicConfig(level=logging.DEBUG)
+```
+
+To see fewer logs:
+```python
+logging.basicConfig(level=logging.WARNING)
+```

@@ -1,4 +1,5 @@
 """HTTP client to the pixel API."""
+import logging
 from typing import Union, Optional
 
 import aiohttp
@@ -6,6 +7,9 @@ import aiohttp
 from .canvas import Canvas, Pixel
 from .colours import Colour, parse_colour
 from .ratelimits import RateLimiter
+
+
+logger = logging.getLogger('dpypx')
 
 
 class Client:
@@ -47,6 +51,9 @@ class Client:
         if not ratelimit_after:
             await self.ratelimits.pause(endpoint)
         client = await self.get_client()
+        logger.debug(
+            f'Request: {method} {endpoint} data={data!r} params={params!r}.'
+        )
         request = client.request(
             method, self.base_url + endpoint, json=data, params=params
         )
@@ -71,6 +78,7 @@ class Client:
             'y': y,
             'rgb': parse_colour(colour)
         }, ratelimit_after=True)
+        logger.info('Success: {message}'.format(**data))
         return data['message']
 
     async def get_canvas_size(self) -> tuple[int, int]:

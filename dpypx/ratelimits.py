@@ -1,8 +1,12 @@
 """Utility for obeying ratelimits."""
 import asyncio
-from collections import defaultdict
 import json
+import logging
+from collections import defaultdict
 from typing import Optional
+
+
+logger = logging.getLogger('dpypx')
 
 
 class RateLimitEndpoint:
@@ -27,7 +31,11 @@ class RateLimitEndpoint:
     async def pause(self):
         """Pause before sending another request if necessary."""
         if self.remaining or not self.ratelimited:
+            logger.debug(
+                f'Not sleeping, {self.remaining} remaining requests.'
+            )
             return
+        logger.warning(f'Sleeping for {self.reset}s.')
         await asyncio.sleep(self.reset)
 
     def load(self, data: dict[str, int]):
@@ -63,7 +71,9 @@ class RateLimiter:
                 self.save_data = json.load(f)
                 for endpoint, data in self.save_data.items():
                     self.ratelimits[endpoint].load(data)
+            logger.info(f'Loaded ratelimit save from {self.save_file}.')
         except FileNotFoundError:
+            logger.warning(f'Could not find save data from {self.save_file}.')
             self.save_data = {}
 
     def save(self):
