@@ -18,7 +18,10 @@ class Client:
             base_url: str = 'https://pixels.pythondiscord.com/'):
         """Store the token and set up the client."""
         self.base_url = base_url
-        self.headers = {'Authorization': 'Bearer ' + token}
+        self.headers = {
+            'Authorization': 'Bearer ' + token,
+            'User-Agent': 'Artemis dpypx (Python/aiohttp)'
+        }
         self.client = None
         # Cache canvas size, assuming it won't change.
         self.canvas_size = None
