@@ -40,15 +40,19 @@ class Client:
             *,
             data: Optional[dict] = None,
             params: Optional[dict] = None,
-            parse_json: bool = True) -> aiohttp.ClientResponse:
+            parse_json: bool = True,
+            ratelimit_after: bool = False) -> aiohttp.ClientResponse:
         """Make a call to an endpoint, respecting ratelimiting."""
-        await self.ratelimits[endpoint].pause()
+        if not ratelimit_after:
+            await self.ratelimits[endpoint].pause()
         client = await self.get_client()
         request = client.request(
             method, self.base_url + endpoint, json=data, params=params
         )
         async with request as response:
             self.ratelimits[endpoint].update(response.headers)
+            if ratelimit_after:
+                await self.ratelimits[endpoint].pause()
             if parse_json:
                 return await response.json()
             else:
@@ -57,11 +61,15 @@ class Client:
     async def put_pixel(
             self, x: int, y: int, colour: Union[int, str, Colour]) -> str:
         """Draw a pixel and return a message."""
+        # Wait for ratelimits *after* making request, not before. This makes
+        # sense because we don't know how the canvas may have changed by the
+        # time we have finished waiting, whereas for GET endpoints, we want to
+        # return the information as soon as it is given.
         data = await self.request('POST', 'set_pixel', data={
             'x': x,
             'y': y,
             'rgb': parse_colour(colour)
-        })
+        }, ratelimit_after=True)
         return data['message']
 
     async def get_canvas_size(self) -> tuple[int, int]:
