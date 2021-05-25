@@ -1,5 +1,9 @@
 """Tool for automatically drawing images."""
+from __future__ import annotations
+
 import logging
+
+from PIL import Image
 
 from .canvas import Pixel
 from .client import Client
@@ -12,7 +16,25 @@ class AutoDrawer:
     """Tool for automatically drawing images."""
 
     @classmethod
-    def load(cls, client: Client, data: str):
+    def load_image(
+            cls, client: Client, xy: tuple[int, int],
+            image: Image.Image, scale: float = 1) -> AutoDrawer:
+        """Draw from the pixels of an image."""
+        if image.mode == 'RGBA':
+            new_image = Image.new('RGB', image.size)
+            new_image.paste(image, mask=image)
+            image = new_image
+        width = round(image.width * scale)
+        height = round(image.height * scale)
+        data = list(image.resize((width, height)).getdata())
+        grid = [
+            [Pixel(*pixel) for pixel in data[start:start + width]]
+            for start in range(0, len(data), width)
+        ]
+        return cls(client, *xy, grid)
+
+    @classmethod
+    def load(cls, client: Client, data: str) -> AutoDrawer:
         """Draw from a string that specifies the pixels.
 
         `data` should be a multi-line string. The first two lines are the x

@@ -39,6 +39,18 @@ await client.close()
 
 ## Auto-draw
 
+Load an image:
+
+```python
+from PIL import Image
+
+im = Image.open('pretty.png')
+ad = dpypx.AutoDraw.load_image(client, (5, 40), im, scale=0.1)
+await ad.draw()
+```
+
+Or specify each pixel:
+
 ```python
 ad = dpypx.AutoDraw.load(client, '''0
 0
