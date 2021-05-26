@@ -76,25 +76,24 @@ class AutoDrawer:
             for y in range(self.y0, self.y1):
                 yield x, y
 
-    async def check_pixel(self, canvas: Canvas, x: int, y: int) -> Canvas:
+    async def check_pixel(self, canvas: Canvas, x: int, y: int) -> bool:
         """Draw a pixel if not already drawn.
 
-        Returns the latest canvas.
+        Returns True if the pixel was not already drawn.
         """
         colour = self.grid[y - self.y0][x - self.x0]
         if canvas[x, y] == colour:
             logger.debug(f'Skipping already correct pixel at {x}, {y}.')
-            # Very little time was consumed since we didn't draw a pixel,
-            # so assume the canvas hasn't changed.
-            return canvas
+            return False
         await self.client.put_pixel(x, y, colour)
-        return await self.client.get_canvas()
+        return True
 
     async def draw(self):
         """Draw the pixels of the image, attempting each pixel max. once."""
         canvas = await self.client.get_canvas()
         for x, y in self._iter_coords():
-            canvas = await self.check_pixel(canvas, x, y)
+            if await self.check_pixel(canvas, x, y):
+                canvas = await self.client.get_canvas()
 
     async def draw_and_fix(self, forever: bool = True):
         """Draw the pixels of the image, prioritise fixing existing ones."""
@@ -103,9 +102,10 @@ class AutoDrawer:
         while work_to_do:
             work_to_do = False
             for x, y in self._iter_coords():
-                canvas = await self.check_pixel(canvas, x, y)
-                work_to_do = True
-                break
+                if await self.check_pixel(canvas, x, y):
+                    work_to_do = True
+                    canvas = await self.client.get_canvas()
+                    break
             if forever and not work_to_do:
                 logger.info('Entire image is correct, waiting 1s to loop.')
                 asyncio.sleep(1)
