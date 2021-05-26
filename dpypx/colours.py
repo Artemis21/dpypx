@@ -35,7 +35,7 @@ def parse_colour(value: Union[int, str, Colour]) -> str:
         if value >= 0 and value <= 0xFFFFFF:
             return f'{value:0>6x}'
     elif isinstance(value, str):
-        neat_value = value.removeprefix('#').upper()
+        neat_value = value.lstrip('#').upper()
         if re.match('[0-9A-F]{6}', neat_value):
             return neat_value
         if value.upper() in Colour.__members__:

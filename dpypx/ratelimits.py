@@ -1,4 +1,6 @@
 """Utility for obeying ratelimits."""
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
@@ -46,8 +48,8 @@ class RateLimitEndpoint:
                 f'Not sleeping, {self.remaining} remaining requests.'
             )
             return
-        logger.warning(f'Sleeping for {self.reset}s.')
         if self.reset:
+            logger.warning(f'Sleeping for {self.reset}s.')
             await asyncio.sleep(self.reset)
 
     def load(self, data: dict[str, int]):

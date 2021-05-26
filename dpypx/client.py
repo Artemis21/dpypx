@@ -1,4 +1,6 @@
 """HTTP client to the pixel API."""
+from __future__ import annotations
+
 import logging
 from typing import Union, Optional
 
@@ -6,6 +8,7 @@ import aiohttp
 
 from .canvas import Canvas, Pixel
 from .colours import Colour, parse_colour
+from .errors import HttpClientError, ServerError
 from .ratelimits import RateLimiter
 
 
@@ -64,6 +67,11 @@ class Client:
                     await self.ratelimits.pause(endpoint)
                 if response.status == 429:
                     continue
+                if 500 > response.status >= 400:
+                    data = await response.json()
+                    raise HttpClientError(response.status, data['message'])
+                if response.status >= 500:
+                    raise ServerError()
                 if parse_json:
                     return await response.json()
                 else:

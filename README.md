@@ -2,7 +2,7 @@
 
 A simple wrapper around [Python Discord Pixels](https://pixels.pythondiscord.com).
 
-Requires Python 3.9+ (3.x where x >= 9).
+Requires Python 3.7+ (3.x where x >= 7).
 
 Requires `pillow` and `aiohttp` from pip.
 
