@@ -1,6 +1,7 @@
 """Tool for automatically drawing images."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Iterator
 
@@ -97,7 +98,7 @@ class AutoDrawer:
         for x, y in self._iter_coords():
             canvas = await self.check_pixel(canvas, x, y)
 
-    async def draw_and_fix(self):
+    async def draw_and_fix(self, forever: bool = True):
         """Draw the pixels of the image, prioritise fixing existing ones."""
         canvas = await self.client.get_canvas()
         work_to_do = True
@@ -107,3 +108,7 @@ class AutoDrawer:
                 canvas = await self.check_pixel(canvas, x, y)
                 work_to_do = True
                 break
+            if forever and not work_to_do:
+                logger.info('Entire image is correct, waiting 1s to loop.')
+                asyncio.sleep(1)
+                work_to_do = True
