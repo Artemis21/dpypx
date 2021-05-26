@@ -52,7 +52,7 @@ await ad.draw()
 Or specify each pixel:
 
 ```python
-ad = dpypx.AutoDraw.load(client, '''0
+ad = dpypx.AutoDrawer.load(client, '''0
 0
 3
 2
