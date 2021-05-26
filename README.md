@@ -45,7 +45,7 @@ Load an image:
 from PIL import Image
 
 im = Image.open('pretty.png')
-ad = dpypx.AutoDraw.load_image(client, (5, 40), im, scale=0.1)
+ad = dpypx.AutoDrawer.load_image(client, (5, 40), im, scale=0.1)
 await ad.draw()
 ```
 
