@@ -49,7 +49,20 @@ ad = dpypx.AutoDrawer.load_image(client, (5, 40), im, scale=0.1)
 await ad.draw()
 ```
 
-Or specify each pixel:
+To prefer fixing existing pixels to placing new ones:
+
+```python
+await ad.draw_and_fix()
+```
+
+By default, this will also loop forever. To exit once the whole image is
+correct:
+
+```python
+await ad.draw_and_fix(forever=False)
+```
+
+You can also manually specify each pixel:
 
 ```python
 ad = dpypx.AutoDrawer.load(client, '''0

@@ -81,9 +81,7 @@ class AutoDrawer:
 
         Returns the latest canvas.
         """
-        dx = x - self.x0
-        dy = y - self.y0
-        colour = self.grid[dy][dx]
+        colour = self.grid[y - self.y0][x - self.x0]
         if canvas[x, y] == colour:
             logger.debug(f'Skipping already correct pixel at {x}, {y}.')
             # Very little time was consumed since we didn't draw a pixel,
