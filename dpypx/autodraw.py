@@ -28,7 +28,8 @@ class AutoDrawer:
             image = new_image
         width = round(image.width * scale)
         height = round(image.height * scale)
-        data = list(image.resize((width, height)).getdata())
+        resized = image.resize((width, height), Image.BILINEAR)
+        data = list(resized.getdata())
         grid = [
             [Pixel(*pixel) for pixel in data[start:start + width]]
             for start in range(0, len(data), width)
