@@ -28,7 +28,9 @@ class AutoDrawer:
             image = new_image
         width = round(image.width * scale)
         height = round(image.height * scale)
-        resized = image.resize((width, height), Image.BILINEAR)
+        # since the image is loaded once
+        # we can afford to use a higher quality filter than bilinear
+        resized = image.resize((width, height), Image.LANCZOS)
         data = list(resized.getdata())
         grid = [
             [Pixel(*pixel) for pixel in data[start:start + width]]
