@@ -33,6 +33,9 @@ await client.put_pixel(1, 5, dpypx.Colour.BLURPLE)
 await client.put_pixel(100, 4, '93FF00')
 await client.put_pixel(44, 0, 0xFF0000)
 
+# Swap two pixels.
+await client.swap_pixels((55, 1), (50, 3))
+
 # Close the connection.
 await client.close()
 ```

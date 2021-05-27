@@ -69,7 +69,7 @@ class Client:
                     continue
                 if 500 > response.status >= 400:
                     data = await response.json()
-                    raise HttpClientError(response.status, data['message'])
+                    raise HttpClientError(response.status, data['detail'])
                 if response.status >= 500:
                     raise ServerError()
                 if parse_json:
@@ -109,6 +109,22 @@ class Client:
         """Get a specific pixel of the canvas."""
         data = await self.request('GET', 'get_pixel', params={'x': x, 'y': y})
         return Pixel.from_hex(data['rgb'])
+
+    async def swap_pixels(
+            self, xy0: tuple[int, int], xy1: tuple[int, int]) -> str:
+        """Swap two pixels on the canvas."""
+        data = await self.request('POST', 'swap_pixel', data={
+            'origin': {
+                'x': xy0[0],
+                'y': xy0[1]
+            },
+            'dest': {
+                'x': xy1[0],
+                'y': xy1[1]
+            }
+        }, ratelimit_after=True)
+        logger.info('Success: {message}'.format(**data))
+        return data['message']
 
     async def close(self):
         """Close the underlying session."""
