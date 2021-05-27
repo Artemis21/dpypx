@@ -41,6 +41,7 @@ class RateLimitEndpoint:
             logger.warning(f'Cooldown: Sleeping for {self.cooldown_reset}s.')
             await asyncio.sleep(self.cooldown_reset)
             self.cooldown_reset = None
+            return
         if not self.ratelimited:
             return
         if self.remaining:
