@@ -98,9 +98,9 @@ class AutoDrawer:
 
     async def draw_and_fix(self, forever: bool = True):
         """Draw the pixels of the image, prioritise fixing existing ones."""
-        canvas = await self.client.get_canvas()
         work_to_do = True
         while work_to_do:
+            canvas = await self.client.get_canvas()
             work_to_do = False
             for x, y in self._iter_coords():
                 if await self.check_pixel(canvas, x, y):
