@@ -109,5 +109,5 @@ class AutoDrawer:
                     break
             if forever and not work_to_do:
                 logger.info('Entire image is correct, waiting 1s to loop.')
-                asyncio.sleep(1)
+                await asyncio.sleep(1)
                 work_to_do = True
