@@ -28,8 +28,8 @@ class AutoDrawer:
             image = new_image
         width = round(image.width * scale)
         height = round(image.height * scale)
-        # since the image is loaded once
-        # we can afford to use a higher quality filter than bilinear
+        # Since the image is only loaded once we can afford to use a high
+        # quality filter.
         resized = image.resize((width, height), Image.LANCZOS)
         data = list(resized.getdata())
         grid = [
