@@ -31,8 +31,6 @@ class Client:
             'User-Agent': 'Artemis dpypx (Python/aiohttp)'
         }
         self.client = None
-        # Cache canvas size, assuming it won't change.
-        self.canvas_size = None
         self.ratelimits = RateLimiter(ratelimit_save_file)
 
     async def get_client(self) -> aiohttp.ClientSession:
@@ -93,9 +91,7 @@ class Client:
         return data['message']
 
     async def get_canvas_size(self) -> tuple[int, int]:
-        """Get the size of the canvas (with caching)."""
-        if self.canvas_size:
-            return self.canvas_size
+        """Get the size of the canvas."""
         data = await self.request('GET', 'get_size')
         return data['width'], data['height']
 
