@@ -14,9 +14,6 @@ import dpypx
 # Create a client with your token.
 client = dpypx.Client('my-auth-token')
 
-# You can also set a save file to store ratelimit data between reboots.
-client = dpypx.Client('my-auth-token', ratelimit_save_file='ratelimits.json')
-
 # Download and save the canvas.
 canvas = await client.get_canvas()
 canvas.save('canvas.png')

@@ -2,25 +2,30 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-from collections import defaultdict
+from dataclasses import dataclass
 from typing import Optional
+
+from . import client
+from .errors import MethodNotAllowedError
 
 
 logger = logging.getLogger('dpypx')
 
 
+@dataclass
 class RateLimitEndpoint:
     """Ratelimiter for a specific endpoint."""
 
-    def __init__(self):
-        """Initialise fields to defaults."""
-        self.ratelimited = True    # Not all endpoints are ratelimited.
-        self.remaining = 1
-        self.limit = None
-        self.reset = None
-        self.cooldown_reset = None
+    client: client.Client
+    endpoint: str
+    # We don't care about Requests-Period, we just dynamically wait based on
+    # Requests-Reset.
+    ratelimited: Optional[bool] = None
+    limit: Optional[int] = None
+    remaining: Optional[int] = None
+    reset: Optional[float] = None
+    cooldown_reset: Optional[int] = None
 
     def update(self, headers: dict[str, int]):
         """Update the ratelimiter based on the latest headers."""
@@ -31,9 +36,10 @@ class RateLimitEndpoint:
         if 'Requests-Remaining' not in headers:
             self.ratelimited = False
             return
+        self.ratelimited = True
         self.remaining = int(headers['Requests-Remaining'])
         self.limit = int(headers['Requests-Limit'])
-        self.reset = int(headers.get('Requests-Reset', self.reset))
+        self.reset = float(headers['Requests-Reset'])
 
     async def pause(self):
         """Pause before sending another request if necessary."""
@@ -42,6 +48,8 @@ class RateLimitEndpoint:
             await asyncio.sleep(self.cooldown_reset)
             self.cooldown_reset = None
             return
+        if self.ratelimited is None:
+            await self.check_limits()
         if not self.ratelimited:
             return
         if self.remaining:
@@ -53,59 +61,35 @@ class RateLimitEndpoint:
             logger.warning(f'Sleeping for {self.reset}s.')
             await asyncio.sleep(self.reset)
 
-    def load(self, data: dict[str, int]):
-        """Load stored ratelimit data."""
-        self.remaining = data['remaining']
-        self.limit = data['limit']
-        self.reset = data['reset']
-        self.cooldown_reset = data.get('cooldown_reset', 0)
-
-    def dump(self) -> dict[str, int]:
-        """Dump ratelimit data for storing."""
-        return {
-            'remaining': self.remaining,
-            'limit': self.limit,
-            'reset': self.reset,
-            'cooldown_reset': self.cooldown_reset
-        }
+    async def check_limits(self):
+        """Check the ratelimits with a HEAD request."""
+        try:
+            # Client.send_request will call self.update.
+            await self.client.send_request('HEAD', self.endpoint)
+        except MethodNotAllowedError:
+            self.ratelimited = False
 
 
 class RateLimiter:
     """Ratelimiters for all the endpoints."""
 
-    def __init__(self, save_file: Optional[str] = None):
-        """Load existing stored data."""
-        self.ratelimits = defaultdict(RateLimitEndpoint)
-        self.save_file = save_file
-        self.save_data = None
-        if save_file:
-            self.load()
+    def __init__(self, client: client.Client):
+        """Set up the ratelimiter."""
+        self.client = client
+        self.ratelimits = {}
 
-    def load(self):
-        """Load save data."""
-        try:
-            with open(self.save_file) as f:
-                self.save_data = json.load(f)
-                for endpoint, data in self.save_data.items():
-                    self.ratelimits[endpoint].load(data)
-            logger.info(f'Loaded ratelimit save from {self.save_file}.')
-        except FileNotFoundError:
-            logger.warning(f'Could not find save data from {self.save_file}.')
-            self.save_data = {}
-
-    def save(self):
-        """Save ratelimit data."""
-        with open(self.save_file, 'w') as f:
-            json.dump(self.save_data, f)
+    def __getitem__(self, endpoint: str) -> RateLimitEndpoint:
+        """Get the ratelimiter for a specific endpoint."""
+        if endpoint not in self.ratelimits:
+            self.ratelimits[endpoint] = RateLimitEndpoint(
+                self.client, endpoint
+            )
+        return self.ratelimits[endpoint]
 
     def update(self, endpoint: str, headers: dict[str, int]):
         """Update the ratelimits for an endpoint with the latest headers."""
-        limiter = self.ratelimits[endpoint]
-        limiter.update(headers)
-        if self.save_file:
-            self.save_data[endpoint] = limiter.dump()
-            self.save()
+        self[endpoint].update(headers)
 
     async def pause(self, endpoint: str):
         """Pause before sending another request for an endpoint."""
-        await self.ratelimits[endpoint].pause()
+        await self[endpoint].pause()
