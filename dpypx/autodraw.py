@@ -73,11 +73,17 @@ class AutoDrawer:
         self.x1 = x + len(self.grid[0])
         self.y1 = y + len(self.grid)
 
-    def _iter_coords(self) -> Iterator[tuple[int, int]]:
+    def _iter_coords(
+            self, top_to_bottom: bool = False) -> Iterator[tuple[int, int]]:
         """Iterate over the coordinates of the image."""
-        for x in range(self.x0, self.x1):
+        if top_to_bottom:
+            for x in range(self.x0, self.x1):
+                for y in range(self.y0, self.y1):
+                    yield x, y
+        else:
             for y in range(self.y0, self.y1):
-                yield x, y
+                for x in range(self.x0, self.x1):
+                    yield x, y
 
     async def check_pixel(self, canvas: Canvas, x: int, y: int) -> bool:
         """Draw a pixel if not already drawn.
@@ -91,20 +97,23 @@ class AutoDrawer:
         await self.client.put_pixel(x, y, colour)
         return True
 
-    async def draw(self):
+    async def draw(self, top_to_bottom: bool = False):
         """Draw the pixels of the image, attempting each pixel max. once."""
         canvas = await self.client.get_canvas()
-        for x, y in self._iter_coords():
+        for x, y in self._iter_coords(top_to_bottom):
             if await self.check_pixel(canvas, x, y):
                 canvas = await self.client.get_canvas()
 
-    async def draw_and_fix(self, forever: bool = True):
+    async def draw_and_fix(
+            self,
+            forever: bool = True,
+            top_to_bottom: bool = False):
         """Draw the pixels of the image, prioritise fixing existing ones."""
         work_to_do = True
         while work_to_do:
             canvas = await self.client.get_canvas()
             work_to_do = False
-            for x, y in self._iter_coords():
+            for x, y in self._iter_coords(top_to_bottom):
                 if await self.check_pixel(canvas, x, y):
                     work_to_do = True
                     canvas = await self.client.get_canvas()
