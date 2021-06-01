@@ -44,7 +44,7 @@ class RateLimitEndpoint:
     async def pause(self):
         """Pause before sending another request if necessary."""
         if self.cooldown_reset:
-            logger.warning(f'Cooldown: Sleeping for {self.cooldown_reset}s.')
+            logger.error(f'Cooldown: Sleeping for {self.cooldown_reset}s.')
             await asyncio.sleep(self.cooldown_reset)
             self.cooldown_reset = None
             return
@@ -60,6 +60,7 @@ class RateLimitEndpoint:
         if self.reset:
             logger.warning(f'Sleeping for {self.reset}s.')
             await asyncio.sleep(self.reset)
+            self.remaining = self.limit
 
     async def check_limits(self):
         """Check the ratelimits with a HEAD request."""
