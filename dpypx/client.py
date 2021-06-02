@@ -9,7 +9,11 @@ import aiohttp
 from .canvas import Canvas, Pixel
 from .colours import Colour, parse_colour
 from .errors import (
-    HttpClientError, MethodNotAllowedError, RatelimitedError, ServerError
+    EndpointDisabledError,
+    HttpClientError,
+    MethodNotAllowedError,
+    RatelimitedError,
+    ServerError
 )
 from . import ratelimits
 
@@ -60,6 +64,10 @@ class Client:
             if 500 > response.status >= 400:
                 if response.status == 405:
                     class_ = MethodNotAllowedError
+                elif response.status == 410:
+                    raise EndpointDisabledError(
+                        410, 'This endpoint has been temporarily disabled.'
+                    )
                 elif response.status == 429:
                     class_ = RatelimitedError
                 else:

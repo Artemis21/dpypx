@@ -41,6 +41,10 @@ class MethodNotAllowedError(HttpClientError):
     """
 
 
+class EndpointDisabledError(HttpClientError):
+    """Exception raised when an API endpoint is temporarily disabled."""
+
+
 class ServerError(DpypxError):
     """Exception raised when the API returns an 500 range code."""
 
