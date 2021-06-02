@@ -3,12 +3,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Iterator
+from typing import Iterator, Optional
 
 from PIL import Image
 
 from .canvas import Canvas, Pixel
 from .client import Client
+from .errors import EndpointDisabledError
 
 
 logger = logging.getLogger('dpypx')
@@ -66,12 +67,20 @@ class AutoDrawer:
         """Store the plan."""
         self.client = client
         self.grid = grid
+        self.canvas: Optional[Canvas] = None
         # Top left coords.
         self.x0 = x
         self.y0 = y
         # Bottom right coords.
         self.x1 = x + len(self.grid[0])
         self.y1 = y + len(self.grid)
+
+    async def update_canvas(self):
+        """Update our cache of the canvas, if possible."""
+        try:
+            self.canvas = await self.client.get_canvas()
+        except EndpointDisabledError:
+            logger.warning('Unable to get canvas (endpoint disabled).')
 
     def _iter_coords(
             self, top_to_bottom: bool = False) -> Iterator[tuple[int, int]]:
@@ -85,13 +94,13 @@ class AutoDrawer:
                 for x in range(self.x0, self.x1):
                     yield x, y
 
-    async def check_pixel(self, canvas: Canvas, x: int, y: int) -> bool:
+    async def check_pixel(self, x: int, y: int) -> bool:
         """Draw a pixel if not already drawn.
 
         Returns True if the pixel was not already drawn.
         """
         colour = self.grid[y - self.y0][x - self.x0]
-        if canvas[x, y] == colour:
+        if self.canvas and self.canvas[x, y] == colour:
             logger.debug(f'Skipping already correct pixel at {x}, {y}.')
             return False
         await self.client.put_pixel(x, y, colour)
@@ -99,10 +108,10 @@ class AutoDrawer:
 
     async def draw(self, top_to_bottom: bool = False):
         """Draw the pixels of the image, attempting each pixel max. once."""
-        canvas = await self.client.get_canvas()
+        await self.update_canvas()
         for x, y in self._iter_coords(top_to_bottom):
-            if await self.check_pixel(canvas, x, y):
-                canvas = await self.client.get_canvas()
+            if await self.check_pixel(x, y):
+                await self.update_canvas()
 
     async def draw_and_fix(
             self,
@@ -111,12 +120,12 @@ class AutoDrawer:
         """Draw the pixels of the image, prioritise fixing existing ones."""
         work_to_do = True
         while work_to_do:
-            canvas = await self.client.get_canvas()
+            await self.update_canvas()
             work_to_do = False
             for x, y in self._iter_coords(top_to_bottom):
-                if await self.check_pixel(canvas, x, y):
+                if await self.check_pixel(x, y):
                     work_to_do = True
-                    canvas = await self.client.get_canvas()
+                    await self.update_canvas()
                     break
             if forever and not work_to_do:
                 logger.info('Entire image is correct, waiting 1s to loop.')
