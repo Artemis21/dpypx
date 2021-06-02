@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta
 from typing import Union, Optional
 
 import aiohttp
@@ -39,6 +40,8 @@ class Client:
         }
         self.client = None
         self.ratelimits = ratelimits.RateLimiter(self)
+        # Dict of endpoint to unlock date.
+        self.locked: dict[str, datetime] = {}
 
     async def get_client(self) -> aiohttp.ClientSession:
         """Get or create the client session."""
@@ -65,9 +68,11 @@ class Client:
                 if response.status == 405:
                     class_ = MethodNotAllowedError
                 elif response.status == 410:
-                    raise EndpointDisabledError(
-                        410, 'This endpoint has been temporarily disabled.'
-                    )
+                    length = timedelta(seconds=float(
+                        response.headers['Endpoint-Unlock']
+                    ))
+                    self.locked[endpoint] = datetime.now() + length
+                    class_ = EndpointDisabledError
                 elif response.status == 429:
                     class_ = RatelimitedError
                 else:
@@ -99,6 +104,11 @@ class Client:
             params: Optional[dict] = None,
             ratelimit_after: bool = False) -> Union[dict, bytes, None]:
         """Make a call to an endpoint, respecting ratelimiting."""
+        if endpoint in self.locked:
+            if self.locked[endpoint] < datetime.now():
+                del self.locked[endpoint]
+            else:
+                raise EndpointDisabledError(410, 'Endpoint unavailable.')
         retry = True
         while retry:
             # Always check before sending a request, even if we *want* to wait
