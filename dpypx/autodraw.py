@@ -55,7 +55,7 @@ class AutoDrawer:
         for _ in range(height):
             row = []
             for _ in range(width):
-                row.append((Pixel.from_hex(lines.pop(0))), True)
+                row.append((Pixel.from_hex(lines.pop(0)), True))
             grid.append(row)
         return cls(client, x, y, grid)
 
@@ -97,7 +97,7 @@ class AutoDrawer:
         Returns True if the pixel was not already drawn.
         """
         colour, opaque = self.grid[y - self.y0][x - self.x0]
-	    if not opaque:
+	if not opaque:
             logger.debug(f"Skipping transparent pixel at {x}, {y}.")
             return False
         if self.canvas and self.canvas[x, y] == colour:
