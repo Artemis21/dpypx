@@ -21,7 +21,8 @@ class AutoDrawer:
     @classmethod
     def load_image(
             cls, client: Client, xy: tuple[int, int],
-            image: Image.Image, scale: float = 1, strict: bool = False) -> AutoDrawer:
+            image: Image.Image, scale: float = 1) -> AutoDrawer:
+        """Draw from the pixels of an image."""
         image = image.convert(mode="RGBA")
         width = round(image.width * scale)
         height = round(image.height * scale)
@@ -30,7 +31,7 @@ class AutoDrawer:
         resized = image.resize((width, height), Image.LANCZOS)
         data = list(resized.getdata())
         grid = [
-            [(Pixel(*pixel[:3]), bool(round(pixel[3] / 255))) for pixel in data[start:start + width]]
+            [(Pixel(*pixel[:3]), pixel[3] > 127) for pixel in data[start:start + width]]
             for start in range(0, len(data), width)
         ]
         return cls(client, *xy, grid)
@@ -95,9 +96,8 @@ class AutoDrawer:
 
         Returns True if the pixel was not already drawn.
         """
-        pixel = self.grid[y - self.y0][x - self.x0]
-        colour = pixel[0]
-        if not pixel[1]:
+        colour, opaque = self.grid[y - self.y0][x - self.x0]
+	    if not opaque:
             logger.debug(f"Skipping transparent pixel at {x}, {y}.")
             return False
         if self.canvas and self.canvas[x, y] == colour:
