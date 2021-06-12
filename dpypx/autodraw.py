@@ -31,7 +31,10 @@ class AutoDrawer:
         resized = image.resize((width, height), Image.LANCZOS)
         data = list(resized.getdata())
         grid = [
-            [(Pixel(*pixel[:3]), pixel[3] > 127) for pixel in data[start:start + width]]
+            [
+                (Pixel(*pixel[:3]), pixel[3] > 127)
+                for pixel in data[start:start + width]
+            ]
             for start in range(0, len(data), width)
         ]
         return cls(client, *xy, grid)
