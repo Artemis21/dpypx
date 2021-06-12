@@ -23,10 +23,7 @@ class AutoDrawer:
             cls, client: Client, xy: tuple[int, int],
             image: Image.Image, scale: float = 1) -> AutoDrawer:
         """Draw from the pixels of an image."""
-        if image.mode == 'RGBA':
-            new_image = Image.new('RGB', image.size)
-            new_image.paste(image, mask=image)
-            image = new_image
+        image = image.convert(mode="RGBA")
         width = round(image.width * scale)
         height = round(image.height * scale)
         # Since the image is only loaded once we can afford to use a high
@@ -34,7 +31,10 @@ class AutoDrawer:
         resized = image.resize((width, height), Image.LANCZOS)
         data = list(resized.getdata())
         grid = [
-            [Pixel(*pixel) for pixel in data[start:start + width]]
+            [
+                (Pixel(*pixel[:3]), pixel[3] > 127)
+                for pixel in data[start:start + width]
+            ]
             for start in range(0, len(data), width)
         ]
         return cls(client, *xy, grid)
@@ -58,7 +58,7 @@ class AutoDrawer:
         for _ in range(height):
             row = []
             for _ in range(width):
-                row.append(Pixel.from_hex(lines.pop(0)))
+                row.append((Pixel.from_hex(lines.pop(0)), True))
             grid.append(row)
         return cls(client, x, y, grid)
 
@@ -99,7 +99,10 @@ class AutoDrawer:
 
         Returns True if the pixel was not already drawn.
         """
-        colour = self.grid[y - self.y0][x - self.x0]
+        colour, opaque = self.grid[y - self.y0][x - self.x0]
+	if not opaque:
+            logger.debug(f"Skipping transparent pixel at {x}, {y}.")
+            return False
         if self.canvas and self.canvas[x, y] == colour:
             logger.debug(f'Skipping already correct pixel at {x}, {y}.')
             return False
